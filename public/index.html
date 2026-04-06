@@ -2,20 +2,26 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Watch Together - Login</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="login-page">
 
-<div class="login-container">
-    <h1>Watch Together</h1>
-    <input id="email" type="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-    <button id="loginBtn">Войти</button>
-    <p id="error"></p>
-</div>
+    <div class="main-container login-wrapper">
+        <div class="login-container">
+            <h1>Watch Together</h1>
+            
+            <div class="input-group">
+                <input id="email" type="email" placeholder="Email" autocomplete="off">
+                <input id="password" type="password" placeholder="Password">
+            </div>
 
-<script type="module" src="js/auth.js"></script>
+            <button id="loginBtn">Войти</button>
+            <p id="error"></p>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
 </body>
 </html>

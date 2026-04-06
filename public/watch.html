@@ -2,18 +2,25 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watch Together — Главная</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Rooms - Watch Together</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="main-page">
+<body>
+
     <div class="top-bar">
-        <h2 style="font-size: 34px; font-weight: 700;">Rooms</h2>
+        <h2>Rooms</h2>
         <button id="logoutBtn" class="btn-secondary">Exit</button>
     </div>
 
     <div class="main-container">
-        <button id="createRoom" style="margin-bottom: 30px;">+ Create Room</button>
+        <div class="card">
+          <h3>Online Now</h3>
+          <div id="onlineList" class="online-list"></div>
+        </div>
+
+        <button id="createRoom" style="margin-bottom: 20px;">+ Create New Room</button>
+
         <div id="roomList"></div>
     </div>
 
