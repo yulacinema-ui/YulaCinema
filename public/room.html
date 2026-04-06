@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Room - Watch Together</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="top-bar">
+        <button onclick="location.href='watch.html'" class="btn-secondary">← Back</button>
+        <div id="roomTitle" style="font-weight: 600;">Loading...</div>
+    </div>
+
+    <div class="main-container">
+        <div class="video-container">
+            <div style="color: grey; text-align: center; padding-top: 20%;">Video Player Area</div>
+        </div>
+        
+        <div class="card">
+            <h3>Users in room:</h3>
+            <ul id="userList" style="list-style: none; color: var(--text-secondary);"></ul>
+        </div>
+    </div>
+
+    <script type="module" src="js/room.js"></script>
+</body>
+</html>

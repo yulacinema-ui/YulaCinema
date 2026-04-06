@@ -1,24 +1,22 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Watch Together — Главная</title>
-<link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Together — Главная</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="main-page">
+    <div class="top-bar">
+        <h2 style="font-size: 34px; font-weight: 700;">Rooms</h2>
+        <button id="logoutBtn" class="btn-secondary">Exit</button>
+    </div>
 
-<div class="top-bar">
-  <div class="profile">👤 User1</div>
-  <div class="profile">👤 User2</div>
-</div>
+    <div class="main-container">
+        <button id="createRoom" style="margin-bottom: 30px;">+ Create Room</button>
+        <div id="roomList"></div>
+    </div>
 
-<div class="card room-section">
-  <button id="createRoom">Создать комнату</button>
-  <h3>Доступные комнаты:</h3>
-  <ul id="roomList"></ul>
-</div>
-
-<script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
