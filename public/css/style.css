@@ -1,0 +1,33 @@
+body{
+  background: var(--bg);
+  color: var(--text);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:20px;
+}
+
+.card{
+  background: var(--card);
+  padding:20px;
+  border-radius: var(--radius);
+  backdrop-filter: blur(var(--blur));
+  box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  margin-bottom:20px;
+}
+
+.login-card{
+  max-width:400px;
+  width:100%;
+}
+
+.room-section{
+  max-width:500px;
+  width:100%;
+}
+
+.error-msg{
+  color:red;
+  margin-top:10px;
+}
