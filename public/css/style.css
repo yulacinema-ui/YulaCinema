@@ -216,6 +216,75 @@ button:active { opacity: 0.7; transform: scale(0.98); }
     padding: 8px 16px;
     width: auto;
 }
+/* Специально для страницы комнаты */
+#roomTitle {
+    font-weight: 600;
+    font-size: 17px;
+    flex: 1;
+    text-align: center;
+    margin-right: 40px; /* Чтобы сбалансировать кнопку Back */
+}
+
+.video-wrapper {
+    padding: 0; /* Видео должно быть на всю ширину карточки */
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-placeholder {
+    color: var(--secondary);
+    font-size: 14px;
+}
+
+.join-btn {
+    margin-right: 20px;
+}
+/* Стили для страницы комнаты */
+.video-card {
+    padding: 0 !important; /* Убираем внутренние отступы карточки для видео */
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+}
+
+.placeholder-content {
+    text-align: center;
+    color: var(--secondary);
+}
+
+.placeholder-content .icon {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+#roomTitle {
+    font-size: 17px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+/* Адаптация под мобильные */
+@media (max-width: 600px) {
+    .top-bar {
+        padding: 40px 15px 15px;
+    }
+    
+    .top-bar h2 {
+        font-size: 28px;
+    }
+}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }

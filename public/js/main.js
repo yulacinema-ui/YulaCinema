@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, push, set, onValue, onDisconnect, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD-2n8UlUbuiD0SLNj0tLTjvVaIfaTY61g",
@@ -12,124 +12,94 @@ const firebaseConfig = {
     appId: "1:194720886903:web:4c1015a88a0332698a5672"
 };
 
-// Инициализация
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// Элементы
 const roomListUI = document.getElementById('roomList');
 const onlineListUI = document.getElementById('onlineList');
 const createBtn = document.getElementById('createRoom');
 const logoutBtn = document.getElementById('logoutBtn');
 
-// --- 1. СИСТЕМА ПРИСУТСТВИЯ И ПРОВЕРКА ВХОДА ---
+// 1. СТАТУС ОНЛАЙН
 onAuthStateChanged(auth, (user) => {
     if (user) {
         const myStatusRef = ref(db, `status/${user.uid}`);
         const connectedRef = ref(db, ".info/connected");
-
         onValue(connectedRef, (snap) => {
             if (snap.val() === true) {
-                // Когда пользователь отключается, Firebase удаляет запись из /status/
                 onDisconnect(myStatusRef).remove();
-
-                // Устанавливаем статус "В сети"
-                set(myStatusRef, {
-                    email: user.email,
-                    online: true,
-                    lastActive: serverTimestamp()
-                });
+                set(myStatusRef, { email: user.email, online: true });
             }
         });
     } else {
-        // Если не авторизован — отправляем на логин
-        if (!window.location.pathname.includes("index.html")) {
-            window.location.href = "index.html";
-        }
+        window.location.href = "index.html";
     }
 });
 
-// --- 2. ОТОБРАЖЕНИЕ КТО В СЕТИ ---
+// 2. КТО В СЕТИ
 onValue(ref(db, 'status'), (snapshot) => {
     onlineListUI.innerHTML = "";
-    
-    if (!snapshot.exists()) {
-        onlineListUI.innerHTML = '<span class="empty-msg">Никого нет в сети</span>';
-        return;
-    }
-
     snapshot.forEach((child) => {
-        const userData = child.val();
-        const name = userData.email.split('@')[0];
-        
         const badge = document.createElement('div');
         badge.className = 'user-badge';
-        badge.innerHTML = `
-            <span class="status-dot"></span>
-            <span class="user-name">${name}</span>
-        `;
+        badge.innerHTML = `<span class="status-dot"></span><span class="user-name">${child.val().email.split('@')[0]}</span>`;
         onlineListUI.appendChild(badge);
     });
 });
 
-// --- 3. СОЗДАНИЕ КОМНАТЫ ---
-if (createBtn) {
-    createBtn.onclick = async () => {
-        const roomName = prompt("Введите название комнаты:", "Мой кинотеатр");
-        if (roomName) {
-            try {
-                const roomsRef = ref(db, 'rooms');
-                const newRoomRef = push(roomsRef);
-                
-                await set(newRoomRef, {
-                    name: roomName,
-                    owner: auth.currentUser.email,
-                    createdAt: serverTimestamp()
-                });
-                
-                window.location.href = `room.html?id=${newRoomRef.key}`;
-            } catch (e) {
-                alert("Ошибка доступа! Проверьте правила в Firebase Console.");
-            }
-        }
-    };
-}
+// 3. СОЗДАНИЕ КОМНАТЫ
+createBtn.onclick = async () => {
+    const roomName = prompt("Название комнаты:");
+    if (roomName) {
+        const newRoomRef = push(ref(db, 'rooms'));
+        await set(newRoomRef, {
+            name: roomName,
+            owner: auth.currentUser.email,
+            createdAt: serverTimestamp()
+        });
+        window.location.href = `room.html?id=${newRoomRef.key}`;
+    }
+};
 
-// --- 4. СПИСОК КОМНАТ ---
+// 4. СПИСОК КОМНАТ + УДАЛЕНИЕ
 onValue(ref(db, 'rooms'), (snapshot) => {
     roomListUI.innerHTML = "";
-    
-    if (!snapshot.exists()) {
-        roomListUI.innerHTML = '<p style="color:gray; padding:20px;">Список комнат пуст</p>';
-        return;
-    }
-
     snapshot.forEach((child) => {
         const roomId = child.key;
         const room = child.val();
-        
+        const isOwner = auth.currentUser && room.owner === auth.currentUser.email;
+
         const card = document.createElement('div');
         card.className = 'room-card';
         card.innerHTML = `
             <div class="room-info">
                 <h4>${room.name}</h4>
-                <p>Создал: ${room.owner.split('@')[0]}</p>
+                <p>Host: ${room.owner.split('@')[0]}</p>
             </div>
-            <button class="btn-secondary join-btn" data-id="${roomId}">Войти</button>
+            <div class="room-actions">
+            <button class="join-btn" data-id="${roomId}">Join</button>
+            ${isOwner ? `<button class="btn-secondary delete-btn" data-id="${roomId}">Delete</button>` : ''}
+            </div>
         `;
         roomListUI.appendChild(card);
     });
 
-    // Обработчик для кнопок "Войти"
+    // Кнопка входа
     document.querySelectorAll('.join-btn').forEach(btn => {
-        btn.onclick = () => {
-            window.location.href = `room.html?id=${btn.dataset.id}`;
+        btn.onclick = () => window.location.href = `room.html?id=${btn.dataset.id}`;
+    });
+
+    // Кнопка удаления (только для владельца)
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation(); // Чтобы не сработал клик по карточке
+            if (confirm("Удалить эту комнату?")) {
+                remove(ref(db, `rooms/${btn.dataset.id}`));
+                remove(ref(db, `room_presence/${btn.dataset.id}`));
+            }
         };
     });
 });
 
-// ВЫХОД
-if (logoutBtn) {
-    logoutBtn.onclick = () => signOut(auth);
-}
+logoutBtn.onclick = () => signOut(auth);

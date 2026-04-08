@@ -4,24 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Room - Watch Together</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="room-page">
+
     <div class="top-bar">
         <button onclick="location.href='watch.html'" class="btn-secondary">← Back</button>
-        <div id="roomTitle" style="font-weight: 600;">Loading...</div>
+        <div id="roomTitle">Загрузка...</div>
+        <div style="width: 60px;"></div> </div>
+
+<div class="main-container">
+    <div class="card video-card">
+        <div id="videoPlaceholder" class="placeholder-content">
+            <span class="icon">🎬</span>
+            <p>Ожидание ссылки от хоста...</p>
+        </div>
+        <video id="mainVideo" playsinline controls style="display:none; width:100%; height:100%;"></video>
     </div>
 
-    <div class="main-container">
-        <div class="video-container">
-            <div style="color: grey; text-align: center; padding-top: 20%;">Video Player Area</div>
-        </div>
-        
-        <div class="card">
-            <h3>Users in room:</h3>
-            <ul id="userList" style="list-style: none; color: var(--text-secondary);"></ul>
+    <div id="hostControls" class="card" style="display: none;">
+        <h3>Управление видео</h3>
+        <div class="input-group" style="flex-direction: row; gap: 8px;">
+            <input id="videoUrlInput" type="text" placeholder="Вставьте ссылку на .mp4" style="margin-bottom: 0;">
+            <button id="setVideoBtn" class="btn-secondary">Ок</button>
         </div>
     </div>
+
+    <div class="card">
+        <h3>Users in room</h3>
+        <div id="userList" class="online-list"></div>
+    </div>
+</div>
 
     <script type="module" src="js/room.js"></script>
 </body>
