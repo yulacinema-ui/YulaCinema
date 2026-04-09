@@ -5,14 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Room - Watch Together</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="room-page">
+<body>
 
-    <div class="top-bar">
-        <button onclick="location.href='watch.html'" class="btn-secondary">← Back</button>
-        <div id="roomTitle">Загрузка...</div>
-        <div style="width: 60px;"></div> </div>
+<div class="top-bar">
+    <button onclick="location.href='watch.html'" class="btn-secondary">← Back</button>
+    <div id="roomTitle">Загрузка...</div>
+    <div style="width: 60px;"></div>
+</div>
 
 <div class="main-container">
     <div class="card video-card">
@@ -25,18 +28,28 @@
 
     <div id="hostControls" class="card" style="display: none;">
         <h3>Управление видео</h3>
-        <div class="input-group" style="flex-direction: row; gap: 8px;">
-            <input id="videoUrlInput" type="text" placeholder="Вставьте ссылку на .mp4" style="margin-bottom: 0;">
+        <div class="input-group">
+            <input id="videoUrlInput" type="text" placeholder="Вставьте ссылку на .mp4 или .m3u8">
             <button id="setVideoBtn" class="btn-secondary">Ок</button>
         </div>
     </div>
 
+    <!-- Голосовой чат -->
     <div class="card">
-        <h3>Users in room</h3>
+        <h3>🎤 Голосовой чат</h3>
+        <div class="voice-controls">
+            <button id="enableMicBtn" class="mic-btn">🎙 Включить микрофон</button>
+            <button id="muteMicBtn" class="mic-btn" style="background:#555;" disabled>🔇 Отключить звук</button>
+            <span id="voiceStatus" class="voice-status">⚫ Микрофон выключен</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>👥 В комнате</h3>
         <div id="userList" class="online-list"></div>
     </div>
 </div>
 
-    <script type="module" src="js/room.js"></script>
+<script type="module" src="js/room.js"></script>
 </body>
 </html>
