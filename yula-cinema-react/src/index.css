@@ -307,7 +307,18 @@ button:active { opacity: 0.7; transform: scale(0.98); }
 .voice-status.on {
     color: #4caf50;
 }
-
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 /* Адаптация под мобильные */
 @media (max-width: 600px) {
     .top-bar {
