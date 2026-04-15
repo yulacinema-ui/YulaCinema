@@ -1,41 +1,26 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React from "react";
 
-const VoiceControls = ({ isMicActive, micEnabled, onEnable, onDisable, onToggleMute }) => {
+const VoiceControls = ({ micActive, micEnabled, onEnable, onDisable, onToggleMute }) => {
   return (
     <div className="card">
       <h3>🎤 Голосовой чат</h3>
       <div className="voice-controls">
-        {!isMicActive ? (
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={onEnable}
-            className="mic-btn"
-          >
+        {!micActive ? (
+          <button onClick={onEnable} className="mic-btn">
             🎙 Включить микрофон
-          </motion.button>
+          </button>
         ) : (
           <>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={onToggleMute}
-              className="mic-btn"
-              style={{ background: micEnabled ? '#555' : '#e74c3c' }}
-            >
-              {micEnabled ? '🔇 Выключить звук' : '🎤 Включить звук'}
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={onDisable}
-              className="mic-btn"
-              style={{ background: '#c0392b' }}
-            >
+            <button onClick={onToggleMute} className="mic-btn" style={{ background: micEnabled ? "#555" : "#e74c3c" }}>
+              {micEnabled ? "🔇 Выключить звук" : "🎤 Включить звук"}
+            </button>
+            <button onClick={onDisable} className="mic-btn" style={{ background: "#c0392b" }}>
               ⏹ Остановить микрофон
-            </motion.button>
+            </button>
           </>
         )}
-        <span className={`voice-status ${isMicActive && micEnabled ? 'on' : ''}`}>
-          {isMicActive ? (micEnabled ? '🟢 Микрофон активен' : '🔴 Микрофон отключён') : '⚫ Микрофон выключен'}
+        <span className={`voice-status ${micActive && micEnabled ? "on" : ""}`}>
+          {micActive ? (micEnabled ? "🟢 Микрофон активен" : "🔴 Микрофон отключён") : "⚫ Микрофон выключен"}
         </span>
       </div>
     </div>

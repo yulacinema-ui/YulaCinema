@@ -17,32 +17,31 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-
       if (currentUser) {
-        // Статус "онлайн" с авто-удалением при отключении
-        const userStatusRef = ref(db, `status/${currentUser.uid}`);
+        const statusRef = ref(db, `status/${currentUser.uid}`);
         const connectedRef = ref(db, ".info/connected");
-        const unsubConnected = onValue(connectedRef, (snap) => {
+        onValue(connectedRef, (snap) => {
           if (snap.val() === true) {
-            onDisconnect(userStatusRef).remove();
-            set(userStatusRef, { email: currentUser.email, online: true });
+            onDisconnect(statusRef).remove();
+            set(statusRef, { email: currentUser.email, online: true });
           }
         });
-        return () => unsubConnected();
       }
     });
-
-    return () => unsubscribeAuth();
+    return () => unsubscribe();
   }, []);
 
   const logout = async () => {
     await signOut(auth);
-    toast.success("Вы вышли из аккаунта");
+    toast.success("Вы вышли");
   };
 
-  const value = { user, loading, logout };
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, loading, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };

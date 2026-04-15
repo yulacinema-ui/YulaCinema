@@ -1,7 +1,7 @@
-import React, { forwardRef } from 'react';
-import ReactPlayer from 'react-player';
+import React, { forwardRef } from "react";
+import ReactPlayer from "react-player";
 
-const VideoPlayer = forwardRef(({ url, onPlay, onPause, onSeek, playing, currentTime }, ref) => {
+const VideoPlayer = forwardRef(({ url, playing, onPlay, onPause, onSeek }, ref) => {
   if (!url) {
     return (
       <div className="placeholder-content">
@@ -10,7 +10,6 @@ const VideoPlayer = forwardRef(({ url, onPlay, onPause, onSeek, playing, current
       </div>
     );
   }
-
   return (
     <ReactPlayer
       ref={ref}
@@ -22,14 +21,7 @@ const VideoPlayer = forwardRef(({ url, onPlay, onPause, onSeek, playing, current
       onPlay={onPlay}
       onPause={onPause}
       onSeek={onSeek}
-      config={{
-        file: {
-          attributes: {
-            playsInline: true, // важно для iOS
-          },
-        },
-      }}
-      progressInterval={1000}
+      config={{ file: { attributes: { playsInline: true } } }}
     />
   );
 });

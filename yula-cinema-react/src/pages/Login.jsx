@@ -1,28 +1,24 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../services/firebase";
 import toast from "react-hot-toast";
-import { motion } from "framer-motion";
 
 const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
 
-  const onSubmit = async (data) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email || !password) return toast.error("Введите почту и пароль");
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      await signInWithEmailAndPassword(auth, email, password);
       toast.success("Добро пожаловать!");
       navigate("/rooms");
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("Неверный email или пароль");
     } finally {
       setLoading(false);
@@ -30,42 +26,20 @@ const Login = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      className="login-page"
-    >
+    <div className="login-page">
       <div className="main-container login-wrapper">
         <div className="login-container">
           <h1>Watch Together</h1>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit}>
             <div className="input-group">
-              <input
-                type="email"
-                placeholder="Email"
-                {...register("email", { required: "Email обязателен" })}
-                autoComplete="off"
-              />
-              {errors.email && (
-                <p className="error-text">{errors.email.message}</p>
-              )}
-              <input
-                type="password"
-                placeholder="Password"
-                {...register("password", { required: "Пароль обязателен" })}
-              />
-              {errors.password && (
-                <p className="error-text">{errors.password.message}</p>
-              )}
+              <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input type="password" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
-            <button type="submit" disabled={loading}>
-              {loading ? "Вход..." : "Войти"}
-            </button>
+            <button type="submit" disabled={loading}>{loading ? "Вход..." : "Войти"}</button>
           </form>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

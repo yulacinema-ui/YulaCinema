@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
-import { ref, onValue } from 'firebase/database';
-import { db } from '../services/firebase';
+import { useEffect } from "react";
+import { ref, onValue } from "firebase/database";
+import { db } from "../services/firebase";
+import useRoomStore from "../store/useRoomStore";
 
 export const useRoomUsers = (roomId) => {
-  const [users, setUsers] = useState([]);
+  const { setUsers } = useRoomStore();
 
   useEffect(() => {
     if (!roomId) return;
-    const presenceRef = ref(db, `room_presence/${roomId}`);
-    const unsubscribe = onValue(presenceRef, (snapshot) => {
+    const usersRef = ref(db, `room_presence/${roomId}`);
+    const unsubscribe = onValue(usersRef, (snapshot) => {
       const list = [];
       snapshot.forEach((child) => {
         list.push({ uid: child.key, email: child.val().email });
@@ -16,7 +17,5 @@ export const useRoomUsers = (roomId) => {
       setUsers(list);
     });
     return () => unsubscribe();
-  }, [roomId]);
-
-  return users;
+  }, [roomId, setUsers]);
 };

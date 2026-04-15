@@ -1,73 +1,33 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { ref, update, onValue } from 'firebase/database';
-import { db } from '../services/firebase';
-import { useAuth } from '../contexts/AuthContext';
-import toast from 'react-hot-toast';
+import { useCallback, useRef } from "react";
+import { update, ref } from "firebase/database";
+import { db } from "../services/firebase";
 
-export const useVideoSync = (roomId, playerRef) => {
-  const { user } = useAuth();
+export const useVideoSync = (roomId, user) => {
+  const playerRef = useRef(null);
   const blockSending = useRef(false);
-  const lastSentState = useRef(null);
-  const isHost = useRef(false);
 
-  // Функция отправки действия (play/pause/seek)
-  const sendAction = useCallback((isPlaying, currentTime) => {
+  const sendState = useCallback((playing, time) => {
     if (blockSending.current) return;
-    if (!user) return;
-    const state = {
-      playing: isPlaying,
-      time: currentTime,
+    if (!roomId || !user) return;
+    update(ref(db, `rooms/${roomId}/state`), {
+      playing,
+      time,
       user: user.email,
       ts: Date.now(),
-    };
-    // избегаем дублирования одинаковых состояний
-    if (lastSentState.current && 
-        lastSentState.current.playing === isPlaying && 
-        Math.abs(lastSentState.current.time - currentTime) < 0.5) return;
-    lastSentState.current = state;
-    update(ref(db, `rooms/${roomId}/state`), state).catch(console.warn);
+    });
   }, [roomId, user]);
 
-  // Подписка на внешние изменения состояния
-  useEffect(() => {
-    if (!roomId) return;
-    const stateRef = ref(db, `rooms/${roomId}/state`);
-    const unsubscribe = onValue(stateRef, (snapshot) => {
-      const state = snapshot.val();
-      if (!state || !playerRef.current) return;
-      // Игнорируем свои собственные действия
-      if (state.user === user?.email) return;
+  const onPlay = useCallback(() => {
+    sendState(true, playerRef.current?.getCurrentTime() || 0);
+  }, [sendState]);
 
-      blockSending.current = true;
-      const player = playerRef.current.getInternalPlayer?.() || playerRef.current;
-      if (!player) return;
+  const onPause = useCallback(() => {
+    sendState(false, playerRef.current?.getCurrentTime() || 0);
+  }, [sendState]);
 
-      // Синхронизация времени (с допуском 0.5 сек)
-      if (Math.abs(player.currentTime - state.time) > 0.5) {
-        player.currentTime = state.time;
-      }
-      // Синхронизация воспроизведения
-      if (state.playing && player.paused) {
-        player.play().catch(e => console.log('Autoplay prevented, need user interaction'));
-      } else if (!state.playing && !player.paused) {
-        player.pause();
-      }
-      setTimeout(() => { blockSending.current = false; }, 100);
-    });
-    return () => unsubscribe();
-  }, [roomId, user, playerRef]);
+  const onSeek = useCallback((seconds) => {
+    sendState(false, seconds);
+  }, [sendState]);
 
-  // Определяем, является ли пользователь владельцем комнаты
-  useEffect(() => {
-    if (!roomId || !user) return;
-    const roomRef = ref(db, `rooms/${roomId}`);
-    const unsubRoom = onValue(roomRef, (snapshot) => {
-      const room = snapshot.val();
-      if (room && room.owner === user.email) isHost.current = true;
-      else isHost.current = false;
-    });
-    return () => unsubRoom();
-  }, [roomId, user]);
-
-  return { sendAction, isHost: isHost.current };
+  return { playerRef, onPlay, onPause, onSeek, sendState };
 };
