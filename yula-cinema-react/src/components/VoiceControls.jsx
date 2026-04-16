@@ -1,30 +1,33 @@
-import React from "react";
+import React from 'react';
 
-const VoiceControls = ({ micActive, micEnabled, onEnable, onDisable, onToggleMute }) => {
+const VoiceControls = ({ isMicActive, isMuted, error, isConnecting, onEnable, onDisable, onToggleMute }) => {
   return (
-    <div className="card">
-      <h3>🎤 Голосовой чат</h3>
-      <div className="voice-controls">
-        {!micActive ? (
-          <button onClick={onEnable} className="mic-btn">
-            🎙 Включить микрофон
+    <div className="bg-gray-800 rounded-lg p-4">
+      <h3 className="text-lg font-bold mb-3">🎙️ Voice Chat</h3>
+      {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+      {!isMicActive ? (
+        <button
+          onClick={onEnable}
+          disabled={isConnecting}
+          className="btn-primary w-full disabled:opacity-50"
+        >
+          {isConnecting ? 'Connecting...' : '🎤 Enable Microphone'}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <button onClick={onToggleMute} className="btn-secondary w-full">
+            {isMuted ? '🔇 Unmute' : '🎤 Mute'}
           </button>
-        ) : (
-          <>
-            <button onClick={onToggleMute} className="mic-btn" style={{ background: micEnabled ? "#555" : "#e74c3c" }}>
-              {micEnabled ? "🔇 Выключить звук" : "🎤 Включить звук"}
-            </button>
-            <button onClick={onDisable} className="mic-btn" style={{ background: "#c0392b" }}>
-              ⏹ Остановить микрофон
-            </button>
-          </>
-        )}
-        <span className={`voice-status ${micActive && micEnabled ? "on" : ""}`}>
-          {micActive ? (micEnabled ? "🟢 Микрофон активен" : "🔴 Микрофон отключён") : "⚫ Микрофон выключен"}
-        </span>
-      </div>
+          <button onClick={onDisable} className="btn-danger w-full">
+            ⏹️ Disable Microphone
+          </button>
+          <p className="text-xs text-gray-400 text-center mt-2">
+            {isMuted ? '🔴 Muted' : '🟢 Active'}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
 
-export default React.memo(VoiceControls);
+export default VoiceControls;

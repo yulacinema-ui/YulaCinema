@@ -1,46 +1,40 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db } from "../services/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { ref, set, onDisconnect, onValue } from "firebase/database";
-import toast from "react-hot-toast";
+import { createContext, useContext, useEffect, useState } from 'react';
+import { auth } from '../services/firebase';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
-      if (currentUser) {
-        const statusRef = ref(db, `status/${currentUser.uid}`);
-        const connectedRef = ref(db, ".info/connected");
-        onValue(connectedRef, (snap) => {
-          if (snap.val() === true) {
-            onDisconnect(statusRef).remove();
-            set(statusRef, { email: currentUser.email, online: true });
-          }
-        });
-      }
     });
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
+
+  const login = async (email, password) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success('Logged in');
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
   const logout = async () => {
     await signOut(auth);
-    toast.success("Вы вышли");
+    toast.success('Logged out');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

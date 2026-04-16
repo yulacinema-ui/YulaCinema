@@ -1,356 +1,122 @@
-:root {
-    --bg: #000000;
-    --card: #1c1c1e;
-    --accent: #0a84ff;
-    --success: #32d74b;
-    --text: #ffffff;
-    --secondary: #8e8e93;
-    --border: rgba(255, 255, 255, 0.1);
-    --input-bg: rgba(44, 44, 46, 0.6);
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-* {
+@layer base {
+  * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-}
+  }
 
-body {
-    background-color: var(--bg);
-    color: var(--text);
+  body {
+    background-color: #000000;
+    color: #ffffff;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+  }
 }
-/* Центрирование для страницы логина */
-.login-page {
+
+@layer components {
+  /* Login page specific */
+  .login-page {
     justify-content: center;
     align-items: center;
     background: radial-gradient(circle at center, #1c1c1e 0%, #000000 100%);
-}
+  }
 
-.login-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
-
-/* Контейнер логина */
-.login-container {
+  .login-container {
     background: rgba(28, 28, 30, 0.7);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    padding: 40px 24px;
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
     border-radius: 28px;
-    border: 0.5px solid var(--border);
-    width: 100%;
-    max-width: 340px;
-    text-align: center;
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-    animation: fadeIn 0.5s ease-out;
-}
+  }
 
-.login-container h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 30px;
-    letter-spacing: -0.5px;
-}
-
-/* Группа инпутов */
-.input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-input {
-    width: 100%;
-    height: 50px;
-    background: var(--input-bg);
-    border: 1px solid transparent;
-    border-radius: 12px;
-    padding: 0 16px;
-    color: #fff;
-    font-size: 17px;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-input:focus {
-    border-color: var(--accent);
-    background: rgba(58, 58, 60, 0.8);
-}
-
-input::placeholder {
-    color: var(--secondary);
-}
-
-/* Ошибки */
-#error {
-    color: #ff453a;
-    font-size: 14px;
-    margin-top: 16px;
-    min-height: 18px;
-}
-/* Header iOS Style */
-.top-bar {
-    padding: 60px 20px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(28, 28, 30, 0.8);
-    backdrop-filter: blur(20px);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    border-bottom: 0.5px solid var(--border);
-}
-
-.top-bar h2 { font-size: 34px; font-weight: 700; }
-
-.main-container {
-    padding: 20px;
-    flex: 1;
-}
-
-/* Общие карточки */
-.card {
-    background: var(--card);
+  /* Card style */
+  .apple-card {
+    background-color: #1c1c1e;
     border-radius: 14px;
-    padding: 20px;
-    margin-bottom: 20px;
-    border: 0.5px solid var(--border);
-}
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+  }
 
-.card h3 {
-    font-size: 13px;
-    color: var(--secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 15px;
-}
-
-/* Контейнер для списка пользователей */
-.online-list {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    min-height: 40px;
-    align-items: center;
-}
-
-/* Красивая плашка пользователя */
-.user-badge {
-    background: rgba(255, 255, 255, 0.05); /* Легкий стеклянный эффект */
-    padding: 8px 14px;
+  /* User badge */
+  .user-badge {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(5px);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
-    display: flex;
+    padding: 8px 14px;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(5px);
     animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
+  }
 
-/* Пульсирующая зеленая точка */
-.status-dot {
+  .status-dot {
     width: 8px;
     height: 8px;
     background-color: #32d74b;
     border-radius: 50%;
     box-shadow: 0 0 8px rgba(50, 215, 75, 0.5);
     animation: pulse 2s infinite;
-}
+  }
 
-.user-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: #ffffff;
-}
-
-/* Сообщение, если никого нет */
-.empty-msg {
-    color: var(--secondary);
+  .empty-msg {
+    color: #8e8e93;
     font-size: 14px;
     font-style: italic;
-}
+  }
 
-
-/* Список комнат */
-.room-card {
-    background: var(--card);
+  /* Room card */
+  .room-card {
+    background-color: #1c1c1e;
     margin-bottom: 12px;
     padding: 16px;
     border-radius: 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 0.5px solid var(--border);
-}
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+  }
 
-.room-info h4 { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
-.room-info p { color: var(--secondary); font-size: 13px; }
-
-/* Кнопки */
-button {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 14px;
-    border-radius: 12px;
-    font-size: 17px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-button:active { opacity: 0.7; transform: scale(0.98); }
-
-.btn-secondary {
-    background: #2c2c2e;
-    font-size: 14px;
-    padding: 8px 16px;
-    width: auto;
-}
-/* Специально для страницы комнаты */
-#roomTitle {
-    font-weight: 600;
-    font-size: 17px;
-    flex: 1;
-    text-align: center;
-    margin-right: 40px; /* Чтобы сбалансировать кнопку Back */
-}
-
-.video-wrapper {
-    padding: 0; /* Видео должно быть на всю ширину карточки */
-    overflow: hidden;
+  /* Video wrapper */
+  .video-wrapper {
     aspect-ratio: 16 / 9;
     background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.video-placeholder {
-    color: var(--secondary);
-    font-size: 14px;
-}
-
-.join-btn {
-    margin-right: 20px;
-}
-/* Стили для страницы комнаты */
-.video-card {
-    padding: 0 !important; /* Убираем внутренние отступы карточки для видео */
     overflow: hidden;
-    background: #000;
-    aspect-ratio: 16 / 9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  /* Voice status */
+  .voice-status.on {
+    color: #32d74b;
+  }
+
+  /* Button active scale (global) */
+  button:active {
+    transform: scale(0.98);
+  }
 }
 
-.placeholder-content {
-    text-align: center;
-    color: var(--secondary);
-}
-
-.placeholder-content .icon {
-    font-size: 40px;
-    display: block;
-    margin-bottom: 10px;
-}
-
-#roomTitle {
-    font-size: 17px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-}
-/* Стили для голосового чата (дополнительно к существующим) */
-.voice-card {
-    margin-top: 16px;
-    padding: 16px;
-    background: #2a2a2a;
-    border-radius: 16px;
-}
-.voice-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-.mic-btn {
-    background: #4a6fa5;
-    border: none;
-    color: white;
-    padding: 8px 20px;
-    border-radius: 40px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-.mic-btn.active {
-    background: #dc3545;
-}
-.voice-status {
-    font-size: 13px;
-    color: #aaa;
-}
-.voice-status.on {
-    color: #4caf50;
-}
-.loader-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.2rem;
-  color: #fff;
-  background: #1a1a2e;
-}
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-/* Адаптация под мобильные */
-@media (max-width: 600px) {
-    .top-bar {
-        padding: 40px 15px 15px;
-    }
-    
-    .top-bar h2 {
-        font-size: 28px;
-    }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-/* Анимации */
 @keyframes pulse {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.2); opacity: 0.7; }
-    100% { transform: scale(1); opacity: 1; }
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-10px); }
-    to { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }

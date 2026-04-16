@@ -1,154 +1,83 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { db } from "../services/firebase";
-import { ref, onValue, push, set, remove, serverTimestamp } from "firebase/database";
-import toast from "react-hot-toast";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useRooms } from '../hooks/useFirebaseList';
+import { ref, set, push } from 'firebase/database';
+import { db } from '../services/firebase';
+import UserAvatar from '../components/UserAvatar';
+import toast from 'react-hot-toast';
 
 const Rooms = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [rooms, setRooms] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Подписка на список комнат
-  useEffect(() => {
-    if (!user) return;
-
-    const roomsRef = ref(db, "rooms");
-    const unsubscribeRooms = onValue(
-      roomsRef,
-      (snapshot) => {
-        const roomsData = [];
-        snapshot.forEach((child) => {
-          roomsData.push({
-            id: child.key,
-            ...child.val(),
-          });
-        });
-        console.log("Rooms loaded:", roomsData); // отладка
-        setRooms(roomsData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error loading rooms:", error);
-        toast.error("Ошибка загрузки комнат");
-        setLoading(false);
-      }
-    );
-
-    // Подписка на онлайн-статусы
-    const statusRef = ref(db, "status");
-    const unsubscribeStatus = onValue(statusRef, (snapshot) => {
-      const usersList = [];
-      snapshot.forEach((child) => {
-        usersList.push({ uid: child.key, email: child.val().email });
-      });
-      setOnlineUsers(usersList);
-    });
-
-    return () => {
-      unsubscribeRooms();
-      unsubscribeStatus();
-    };
-  }, [user]);
+  const { rooms, loading } = useRooms();
+  const [newRoomName, setNewRoomName] = useState('');
 
   const createRoom = async () => {
-    const roomName = prompt("Название комнаты:");
-    if (!roomName || !user) return;
-
-    try {
-      const newRoomRef = push(ref(db, "rooms"));
-      await set(newRoomRef, {
-        name: roomName,
-        owner: user.email,
-        createdAt: serverTimestamp(),
-      });
-      toast.success("Комната создана!");
-      // Переход в новую комнату
-      navigate(`/room?id=${newRoomRef.key}`);
-    } catch (error) {
-      console.error("Create room error:", error);
-      toast.error("Не удалось создать комнату");
-    }
+    if (!newRoomName.trim()) return;
+    const roomRef = push(ref(db, 'rooms'));
+    await set(roomRef, {
+      name: newRoomName,
+      owner: user.email,
+      createdAt: Date.now(),
+      videoUrl: null,
+      state: { playing: false, time: 0, ts: Date.now(), user: user.email }
+    });
+    toast.success('Room created');
+    setNewRoomName('');
+    navigate(`/room?id=${roomRef.key}`);
   };
 
-  const deleteRoom = async (roomId) => {
-    if (!confirm("Удалить эту комнату?")) return;
-    try {
-      await remove(ref(db, `rooms/${roomId}`));
-      await remove(ref(db, `room_presence/${roomId}`));
-      toast.success("Комната удалена");
-    } catch (error) {
-      console.error("Delete room error:", error);
-      toast.error("Ошибка удаления");
-    }
+  const joinRoom = (roomId) => {
+    navigate(`/room?id=${roomId}`);
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
-
-  if (loading) {
-    return <div className="loader-container">Загрузка комнат...</div>;
-  }
+  if (loading) return <div className="text-center p-8 text-apple-secondary">Loading rooms...</div>;
 
   return (
-    <div>
-      <div className="top-bar">
-        <h2>Комнаты</h2>
-        <button onClick={handleLogout} className="btn-secondary">Выйти</button>
+    <div className="min-h-screen bg-apple-bg">
+      {/* iOS-style top bar */}
+      <div className="pt-[60px] px-5 pb-5 flex justify-between items-center bg-apple-card/80 backdrop-blur-apple sticky top-0 z-10 border-b border-apple-border">
+        <h2 className="text-3xl font-bold tracking-tight">Rooms</h2>
+        <div className="flex items-center gap-4">
+          <UserAvatar email={user?.email} showName />
+          <button onClick={logout} className="bg-apple-accent text-white px-4 py-2 rounded-xl text-sm font-semibold active:opacity-70 transition">
+            Logout
+          </button>
+        </div>
       </div>
-      <div className="main-container">
-        <div className="card">
-          <h3>Сейчас в сети</h3>
-          <div className="online-list">
-            {onlineUsers.map((u) => (
-              <div key={u.uid} className="user-badge">
-                <span className="status-dot"></span>
-                <span>{u.email.split("@")[0]}</span>
-              </div>
-            ))}
+
+      <div className="max-w-4xl mx-auto p-5">
+        {/* Create room card */}
+        <div className="apple-card p-5 mb-8">
+          <h3 className="text-apple-secondary text-xs uppercase tracking-wider mb-3">Create New Room</h3>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newRoomName}
+              onChange={(e) => setNewRoomName(e.target.value)}
+              placeholder="Room name"
+              className="flex-1 h-12 bg-apple-input border border-transparent rounded-xl px-4 text-white placeholder:text-apple-secondary focus:border-apple-accent focus:bg-[rgba(58,58,60,0.8)] outline-none transition-all"
+            />
+            <button onClick={createRoom} className="bg-apple-accent text-white px-6 rounded-xl font-semibold active:opacity-70 transition">
+              Create
+            </button>
           </div>
         </div>
 
-        <button onClick={createRoom} style={{ marginBottom: "20px" }}>
-          + Создать комнату
-        </button>
-
-        {rooms.length === 0 ? (
-          <p>Нет комнат. Создайте первую!</p>
-        ) : (
-          rooms.map((room) => {
-            const isOwner = user && room.owner === user.email;
-            return (
-              <div key={room.id} className="room-card">
-                <div className="room-info">
-                  <h4>{room.name}</h4>
-                  <p>Хост: {room.owner?.split("@")[0] || room.owner}</p>
-                </div>
-                <div className="room-actions">
-                  <button
-                    className="join-btn"
-                    onClick={() => navigate(`/room?id=${room.id}`)}
-                  >
-                    Войти
-                  </button>
-                  {isOwner && (
-                    <button
-                      className="btn-secondary delete-btn"
-                      onClick={() => deleteRoom(room.id)}
-                    >
-                      Удалить
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
+        {/* Rooms list */}
+        {rooms.length === 0 && <p className="empty-msg text-center">No rooms yet. Create one!</p>}
+        {rooms.map((room) => (
+          <div key={room.id} className="room-card">
+            <div>
+              <h4 className="text-lg font-semibold">{room.name}</h4>
+              <p className="text-apple-secondary text-sm">Owner: {room.owner?.split('@')[0] || 'unknown'}</p>
+            </div>
+            <button onClick={() => joinRoom(room.id)} className="bg-apple-accent text-white px-5 py-2 rounded-xl font-semibold active:opacity-70 transition">
+              Join
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

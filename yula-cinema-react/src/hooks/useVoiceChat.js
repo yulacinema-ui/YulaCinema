@@ -1,175 +1,258 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import Peer from "peerjs";
-import { ref, set, onValue, remove, onDisconnect } from "firebase/database";
-import { db } from "../services/firebase";
-import toast from "react-hot-toast";
+// src/hooks/useVoiceChat.js
+import { useEffect, useRef, useState, useCallback } from 'react';
+import Peer from 'peerjs';
+import { ref, set, onValue, remove, onDisconnect } from 'firebase/database';
+import { db } from '../services/firebase';
 
-export const useVoiceChat = (roomId, user) => {
-  const [micActive, setMicActive] = useState(false);
-  const [micEnabled, setMicEnabled] = useState(true);
+export const useVoiceChat = (roomId, currentUid, userEmail) => {
+  const [isMicActive, setIsMicActive] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [error, setError] = useState(null);
+
   const peerRef = useRef(null);
-  const streamRef = useRef(null);
-  const callsRef = useRef(new Map());
+  const localStreamRef = useRef(null);
+  const activeCallsRef = useRef(new Map());
+  const myPeerIdRef = useRef(null);
+  const isMicActiveRef = useRef(false);
 
-  const generatePeerId = () => `user_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
+  const unlockAudio = useCallback(() => {
+    const silent = new Audio();
+    silent.src = "data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA";
+    silent.play().catch(()=>{});
+    document.querySelectorAll('audio').forEach(audio => {
+      if (audio.paused) audio.play().catch(() => {});
+    });
+  }, []);
 
-  const attachRemoteAudio = useCallback((call, remoteStream) => {
-    const audio = new Audio();
-    audio.srcObject = remoteStream;
-    audio.autoplay = true;
-    audio.playsInline = true;
-    audio.style.display = "none";
-    document.body.appendChild(audio);
-    call.on("close", () => audio.remove());
-    return audio;
+  useEffect(() => {
+    const events = ['touchstart', 'click'];
+    events.forEach(event => document.addEventListener(event, unlockAudio, { once: true }));
+    return () => {
+      events.forEach(event => document.removeEventListener(event, unlockAudio));
+    };
+  }, [unlockAudio]);
+
+  const generateRandomPeerId = () => {
+    return 'user_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+  };
+
+  const attachRemoteStream = useCallback((call, remoteStream) => {
+    const remoteAudio = document.createElement('audio');
+    remoteAudio.autoplay = true;
+    remoteAudio.playsInline = true;
+    remoteAudio.controls = false;
+    remoteAudio.style.display = 'none';
+    document.body.appendChild(remoteAudio);
+    remoteAudio.srcObject = remoteStream;
+    remoteAudio.play().catch(() => {});
+    call.on('close', () => {
+      if (remoteAudio) remoteAudio.remove();
+    });
+    return remoteAudio;
   }, []);
 
   const callAllPeers = useCallback(async () => {
-    if (!peerRef.current || !streamRef.current || !micActive) return;
-    const peersSnapshot = await new Promise(resolve =>
-      onValue(ref(db, `room_peers/${roomId}`), resolve, { onlyOnce: true })
-    );
-    const peers = peersSnapshot.val() || {};
+    if (!peerRef.current || !localStreamRef.current || !isMicActiveRef.current) return;
+    const peersRef = ref(db, `room_peers/${roomId}`);
+    const snapshot = await new Promise(resolve => onValue(peersRef, resolve, { onlyOnce: true }));
+    const peers = snapshot.val() || {};
     for (const [uid, data] of Object.entries(peers)) {
-      if (uid === user?.uid) continue;
-      const targetId = data.peerId;
-      if (targetId && !callsRef.current.has(targetId)) {
-        const call = peerRef.current.call(targetId, streamRef.current);
-        call.on("stream", (remoteStream) => {
-          const audio = attachRemoteAudio(call, remoteStream);
-          callsRef.current.set(targetId, { call, audio });
-        });
-        callsRef.current.set(targetId, { call });
+      if (uid === currentUid) continue;
+      const targetPeerId = data.peerId;
+      if (targetPeerId && !activeCallsRef.current.has(targetPeerId)) {
+        const call = peerRef.current.call(targetPeerId, localStreamRef.current);
+        if (call) {
+          call.on('stream', (remoteStream) => {
+            const audioEl = attachRemoteStream(call, remoteStream);
+            activeCallsRef.current.set(targetPeerId, { call, audioElement: audioEl });
+          });
+          call.on('close', () => {
+            activeCallsRef.current.delete(targetPeerId);
+          });
+          call.on('error', () => {});
+        }
       }
     }
-  }, [roomId, user, micActive, attachRemoteAudio]);
+  }, [roomId, currentUid, attachRemoteStream]);
 
-  useEffect(() => {
-    if (!peerRef.current || !streamRef.current || !micActive || !roomId) return;
+  const listenForNewPeers = useCallback(() => {
     const peersRef = ref(db, `room_peers/${roomId}`);
-    const unsubscribe = onValue(peersRef, (snapshot) => {
+    return onValue(peersRef, (snapshot) => {
+      if (!peerRef.current || !localStreamRef.current || !isMicActiveRef.current) return;
       const peers = snapshot.val() || {};
-      // Подключаемся к новым
       for (const [uid, data] of Object.entries(peers)) {
-        if (uid === user?.uid) continue;
-        const targetId = data.peerId;
-        if (targetId && !callsRef.current.has(targetId)) {
-          const call = peerRef.current.call(targetId, streamRef.current);
-          call.on("stream", (remoteStream) => {
-            const audio = attachRemoteAudio(call, remoteStream);
-            callsRef.current.set(targetId, { call, audio });
-          });
-          callsRef.current.set(targetId, { call });
+        if (uid === currentUid) continue;
+        const targetPeerId = data.peerId;
+        if (targetPeerId && !activeCallsRef.current.has(targetPeerId)) {
+          const call = peerRef.current.call(targetPeerId, localStreamRef.current);
+          if (call) {
+            call.on('stream', (remoteStream) => {
+              const audioEl = attachRemoteStream(call, remoteStream);
+              activeCallsRef.current.set(targetPeerId, { call, audioElement: audioEl });
+            });
+            call.on('close', () => {
+              activeCallsRef.current.delete(targetPeerId);
+            });
+          }
         }
       }
-      // Удаляем тех, кто вышел
-      for (const [peerId, item] of callsRef.current.entries()) {
+      for (let [peerId, item] of activeCallsRef.current.entries()) {
         let stillExists = false;
-        for (const p of Object.values(peers)) {
-          if (p.peerId === peerId) { stillExists = true; break; }
+        for (let item2 of Object.values(peers)) {
+          if (item2.peerId === peerId) { stillExists = true; break; }
         }
         if (!stillExists) {
-          item.call?.close();
-          item.audio?.remove();
-          callsRef.current.delete(peerId);
+          if (item.call) item.call.close();
+          if (item.audioElement) item.audioElement.remove();
+          activeCallsRef.current.delete(peerId);
         }
       }
     });
-    return () => unsubscribe();
-  }, [roomId, user, micActive, attachRemoteAudio]);
+  }, [roomId, currentUid, attachRemoteStream]);
 
-  const enableMic = async () => {
-    if (micActive) return;
+  const enableMicrophone = useCallback(async () => {
+    if (isMicActiveRef.current) return;
+    setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      setMicActive(true);
-      setMicEnabled(true);
+      localStreamRef.current = stream;
+      isMicActiveRef.current = true;
+      setIsMicActive(true);
+      setIsMuted(false);
 
-      const peerId = generatePeerId();
+      const peerId = generateRandomPeerId();
       const peer = new Peer(peerId, {
         config: {
           iceServers: [
             { urls: "stun:stun.l.google.com:19302" },
             { urls: "stun:stun1.l.google.com:19302" },
-            { urls: "stun:stun2.l.google.com:19302" },
-            { urls: "stun:stun3.l.google.com:19302" },
-            { urls: "stun:stun4.l.google.com:19302" }
+            { urls: "stun:stun2.l.google.com:19302" }
           ]
         }
       });
       peerRef.current = peer;
 
-      peer.on("open", async (id) => {
-        const peerDbRef = ref(db, `room_peers/${roomId}/${user.uid}`);
-        await set(peerDbRef, { peerId: id, email: user.email });
-        onDisconnect(peerDbRef).remove();
-        callAllPeers();
+      peer.on('open', async (id) => {
+        myPeerIdRef.current = id;
+        const peerRefDb = ref(db, `room_peers/${roomId}/${currentUid}`);
+        await set(peerRefDb, { peerId: id, email: userEmail });
+        onDisconnect(peerRefDb).remove();
+        await callAllPeers();
       });
 
-      peer.on("call", (call) => {
-        if (!streamRef.current || !micActive) return;
-        call.answer(streamRef.current);
-        call.on("stream", (remoteStream) => {
-          const audio = attachRemoteAudio(call, remoteStream);
-          callsRef.current.set(call.peer, { call, audio });
+      peer.on('call', (incomingCall) => {
+        if (!localStreamRef.current || !isMicActiveRef.current) return;
+        incomingCall.answer(localStreamRef.current);
+        const callerId = incomingCall.peer;
+        incomingCall.on('stream', (remoteStream) => {
+          const audioEl = attachRemoteStream(incomingCall, remoteStream);
+          activeCallsRef.current.set(callerId, { call: incomingCall, audioElement: audioEl });
         });
-        callsRef.current.set(call.peer, { call });
+        incomingCall.on('close', () => {
+          activeCallsRef.current.delete(callerId);
+        });
       });
 
-      peer.on("error", (err) => {
-        console.error(err);
-        toast.error("Ошибка голосового чата");
-        disableMic();
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id' || err.type === 'invalid-id') {
+          peer.destroy();
+          const newPeerId = generateRandomPeerId();
+          const newPeer = new Peer(newPeerId, {
+            config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] }
+          });
+          peerRef.current = newPeer;
+          newPeer.on('open', async (id) => {
+            myPeerIdRef.current = id;
+            const peerRefDb = ref(db, `room_peers/${roomId}/${currentUid}`);
+            await set(peerRefDb, { peerId: id, email: userEmail });
+            onDisconnect(peerRefDb).remove();
+            await callAllPeers();
+          });
+          newPeer.on('call', (incomingCall) => {
+            if (!localStreamRef.current || !isMicActiveRef.current) return;
+            incomingCall.answer(localStreamRef.current);
+            const callerId = incomingCall.peer;
+            incomingCall.on('stream', (remoteStream) => {
+              const audioEl = attachRemoteStream(incomingCall, remoteStream);
+              activeCallsRef.current.set(callerId, { call: incomingCall, audioElement: audioEl });
+            });
+            incomingCall.on('close', () => {
+              activeCallsRef.current.delete(callerId);
+            });
+          });
+        } else {
+          setError(err.message);
+        }
       });
 
-      toast.success("Микрофон включён");
+      const unsubscribe = listenForNewPeers();
+      peer.on('close', () => unsubscribe());
+
     } catch (err) {
-      console.error(err);
-      toast.error("Нет доступа к микрофону");
+      setError("Microphone access denied. Please check permissions.");
+      isMicActiveRef.current = false;
+      setIsMicActive(false);
     }
-  };
+  }, [roomId, currentUid, userEmail, callAllPeers, listenForNewPeers, attachRemoteStream]);
 
-  const disableMic = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
+  const toggleMute = useCallback(() => {
+    if (!localStreamRef.current || !isMicActiveRef.current) return;
+    const audioTracks = localStreamRef.current.getAudioTracks();
+    if (audioTracks.length) {
+      const newMuted = !audioTracks[0].enabled;
+      audioTracks[0].enabled = !newMuted;
+      setIsMuted(newMuted);
     }
-    for (const item of callsRef.current.values()) {
-      item.call?.close();
-      item.audio?.remove();
+  }, []);
+
+  const disableMicrophone = useCallback(async () => {
+    for (let item of activeCallsRef.current.values()) {
+      if (item.call && item.call.close) item.call.close();
+      if (item.audioElement) item.audioElement.remove();
     }
-    callsRef.current.clear();
+    activeCallsRef.current.clear();
+
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+
     if (peerRef.current) {
       peerRef.current.destroy();
       peerRef.current = null;
     }
-    if (user?.uid && roomId) {
-      remove(ref(db, `room_peers/${roomId}/${user.uid}`)).catch(() => {});
-    }
-    setMicActive(false);
-    setMicEnabled(true);
-    toast("Микрофон выключен");
-  };
 
-  const toggleMute = () => {
-    if (!streamRef.current || !micActive) return;
-    const audioTrack = streamRef.current.getAudioTracks()[0];
-    if (audioTrack) {
-      const newState = !audioTrack.enabled;
-      audioTrack.enabled = newState;
-      setMicEnabled(newState);
-      toast(newState ? "Микрофон включён" : "Микрофон отключён");
+    if (currentUid && roomId) {
+      const peerRefDb = ref(db, `room_peers/${roomId}/${currentUid}`);
+      await remove(peerRefDb).catch(() => {});
     }
-  };
 
-  // Очистка при размонтировании
+    isMicActiveRef.current = false;
+    setIsMicActive(false);
+    setIsMuted(false);
+    myPeerIdRef.current = null;
+  }, [roomId, currentUid]);
+
   useEffect(() => {
     return () => {
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-      if (peerRef.current) peerRef.current.destroy();
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(t => t.stop());
+      }
+      if (peerRef.current && !peerRef.current.destroyed) {
+        peerRef.current.destroy();
+      }
+      if (currentUid && roomId) {
+        remove(ref(db, `room_peers/${roomId}/${currentUid}`)).catch(() => {});
+      }
     };
-  }, []);
+  }, [roomId, currentUid]);
 
-  return { micActive, micEnabled, enableMic, disableMic, toggleMute };
+  return {
+    isMicActive,
+    isMuted,
+    error,
+    enableMicrophone,
+    disableMicrophone,
+    toggleMute
+  };
 };
