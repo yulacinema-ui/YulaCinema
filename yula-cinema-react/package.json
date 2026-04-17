@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vidstack/elements": "^1.0.0",
+    "@vidstack/react": "^0.6.15",
     "firebase": "^10.7.0",
     "framer-motion": "^10.16.16",
     "hls.js": "^1.6.16",
@@ -17,7 +19,8 @@
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
     "react-player": "^2.13.0",
-    "react-router-dom": "^6.21.1"
+    "react-router-dom": "^6.21.1",
+    "video.js": "^8.23.7"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

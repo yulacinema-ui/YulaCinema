@@ -6,114 +6,97 @@ import { useVoiceChat } from '../hooks/useVoiceChat';
 import UserAvatar from '../components/UserAvatar';
 import { ref, onValue, update, set, onDisconnect, serverTimestamp } from 'firebase/database';
 import { db } from '../services/firebase';
-import Hls from 'hls.js';
+
+// New Library Components
+import VideoPlayer from '../components/VideoPlayer'; 
+import VideoVolumeSlider from '../components/VideoVolumeSlider';
 
 const Room = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const roomId = searchParams.get('id');
   const { user } = useAuth();
-  const videoRef = useRef(null);
+  
+  // State for Video.js and Firebase Data
+  const [player, setPlayer] = useState(null); 
+  const [roomVideoUrl, setRoomVideoUrl] = useState('');
   const [videoUrlInput, setVideoUrlInput] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [roomName, setRoomName] = useState('');
+  
   const users = useRoomUsers(roomId);
   const voice = useVoiceChat(roomId, user?.uid, user?.email);
-  
-  
-  let hlsRef = useRef(null);
   const blockSendingRef = useRef(false);
 
-  // Load video (supports .m3u8)
-  const loadVideo = (url) => {
-    if (!videoRef.current) return;
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-    if (url && url.endsWith('.m3u8')) {
-      if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-        videoRef.current.src = url;
-      } else if (Hls.isSupported()) {
-        hlsRef.current = new Hls();
-        hlsRef.current.loadSource(url);
-        hlsRef.current.attachMedia(videoRef.current);
-      }
-    } else {
-      videoRef.current.src = url;
-    }
-    if (videoRef.current) videoRef.current.style.display = 'block';
-    const placeholder = document.getElementById('videoPlaceholder');
-    if (placeholder) placeholder.style.display = 'none';
-  };
-
-  // Listen to room data (videoUrl + sync state)
+  // 1. Sync Listeners: Firebase -> Video.js Player
   useEffect(() => {
     if (!roomId) return;
     const roomRef = ref(db, `rooms/${roomId}`);
+    
     const unsubscribe = onValue(roomRef, (snapshot) => {
       const room = snapshot.val();
       if (!room) return;
 
       setRoomName(room.name || "Cinema Room");
 
-      if (room.videoUrl && videoRef.current?.dataset?.url !== room.videoUrl) {
-        if (videoRef.current) videoRef.current.dataset.url = room.videoUrl;
-        loadVideo(room.videoUrl);
+      // Update URL if changed in Database
+      if (room.videoUrl && room.videoUrl !== roomVideoUrl) {
+        setRoomVideoUrl(room.videoUrl);
       }
 
-      if (!room.state || room.state.user === user?.email) return;
+      // Only sync playback if player is ready and action came from another user
+      if (!player || !room.state || room.state.user === user?.email) return;
+
       const state = room.state;
       blockSendingRef.current = true;
-      if (videoRef.current) {
-        if (Math.abs(videoRef.current.currentTime - state.time) > 1) {
-          videoRef.current.currentTime = state.time;
-        }
-        if (state.playing && videoRef.current.paused) {
-          videoRef.current.play().catch(() => console.log('Need user interaction'));
-        } else if (!state.playing && !videoRef.current.paused) {
-          videoRef.current.pause();
-        }
+
+      // Sync Time (threshold of 1.5s to prevent jitter)
+      if (Math.abs(player.currentTime() - state.time) > 1.5) {
+        player.currentTime(state.time);
       }
+
+      // Sync Play/Pause status
+      if (state.playing && player.paused()) {
+        player.play().catch(() => console.log('Autoplay blocked: requires interaction'));
+      } else if (!state.playing && !player.paused()) {
+        player.pause();
+      }
+
       setTimeout(() => { blockSendingRef.current = false; }, 100);
     });
-    return () => unsubscribe();
-  }, [roomId, user?.email]);
 
-  // Send local video actions
+    return () => unsubscribe();
+  }, [roomId, player, user?.email, roomVideoUrl]);
+
+  // 2. Local Actions: Video.js Player -> Firebase
   useEffect(() => {
-    if (!videoRef.current || !roomId || !user?.email) return;
-    const video = videoRef.current;
+    if (!player || !roomId || !user?.email) return;
 
     const sendAction = (isPlaying) => {
       if (blockSendingRef.current) return;
       update(ref(db, `rooms/${roomId}/state`), {
         playing: isPlaying,
-        time: video.currentTime,
+        time: player.currentTime(),
         user: user.email,
         ts: Date.now()
       });
     };
 
-    const onPlay = () => sendAction(true);
-    const onPause = () => sendAction(false);
-    const onSeeked = () => {
-      if (blockSendingRef.current) return;
-      video.pause();
-      sendAction(false);
-    };
+    // Video.js standardized event listeners
+    player.on('play', () => sendAction(true));
+    player.on('pause', () => sendAction(false));
+    player.on('seeked', () => {
+      if (!blockSendingRef.current) sendAction(!player.paused());
+    });
 
-    video.addEventListener('play', onPlay);
-    video.addEventListener('pause', onPause);
-    video.addEventListener('seeked', onSeeked);
     return () => {
-      video.removeEventListener('play', onPlay);
-      video.removeEventListener('pause', onPause);
-      video.removeEventListener('seeked', onSeeked);
+      player.off('play');
+      player.off('pause');
+      player.off('seeked');
     };
-  }, [roomId, user?.email]);
+  }, [player, roomId, user?.email]);
 
-  // Check host
+  // 3. Host Check
   useEffect(() => {
     if (!roomId || !user) return;
     const roomRef = ref(db, `rooms/${roomId}`);
@@ -124,7 +107,7 @@ const Room = () => {
     return () => unsubscribe();
   }, [roomId, user]);
 
-  // Presence
+  // 4. Presence Logic
   useEffect(() => {
     if (!roomId || !user) return;
     const presenceRef = ref(db, `room_presence/${roomId}/${user.uid}`);
@@ -152,26 +135,33 @@ const Room = () => {
         <h2 className="text-lg font-semibold truncate max-w-[200px]">{roomName || "Loading..."}</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm text-apple-secondary">👥 {users.length}</span>
-          {/* <UserAvatar email={user?.email} showName size="sm" /> */}
         </div>
       </div>
 
       <div className="flex-1 p-5 max-w-6xl mx-auto w-full">
-        {/* Video player card */}
-        <div className="apple-card p-0 overflow-hidden mb-5">
-          <div className="video-wrapper">
-            <video
-              ref={videoRef}
-              id="mainVideo"
-              className="w-full h-full"
-              controls
-              playsInline
-              style={{ display: 'block' }}
-            />
-            {/* <div id="videoPlaceholder" className="absolute inset-0 flex flex-col items-center justify-center text-apple-secondary">
-              <span className="text-4xl mb-2">🎬</span>
-              <span>No video loaded</span>
-            </div> */}
+        {/* Video Player Section */}
+        <div className="apple-card p-0 overflow-hidden mb-5 bg-black shadow-2xl">
+          <div className="video-wrapper min-h-[220px]">
+            {roomVideoUrl ? (
+              <VideoPlayer 
+                url={roomVideoUrl} 
+                onPlayerReady={(p) => setPlayer(p)} 
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-apple-secondary">
+                <span className="text-4xl mb-2">🎬</span>
+                <span>Wait for host to load a video</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Custom Volume Logic Bar (Bypasses iOS Lock) */}
+          <div className="p-4 flex justify-between items-center bg-[#1c1c1e] border-t border-white/5">
+            {player ? (
+              <VideoVolumeSlider player={player} />
+            ) : (
+              <div className="text-xs text-apple-secondary italic">Initializing audio bridge...</div>
+            )}
           </div>
         </div>
 
@@ -225,9 +215,9 @@ const Room = () => {
           <div className="flex flex-wrap gap-2">
             {users.length === 0 && <p className="empty-msg">No one else here</p>}
             {users.map((u) => (
-              <div key={u.id} className="user-badge">
-                <span className="status-dot"></span>
-                <span className="text-sm font-medium">{u.email.split('@')[0]}</span>
+              <div key={u.id} className="user-badge flex items-center gap-2 bg-[#2c2c2e] px-3 py-1.5 rounded-full">
+                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                <span className="text-sm font-medium text-white">{u.email?.split('@')[0]}</span>
               </div>
             ))}
           </div>
