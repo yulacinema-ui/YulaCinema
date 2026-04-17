@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRooms } from '../hooks/useFirebaseList';
-import { ref, set, push } from 'firebase/database';
+import { ref, set, push, remove } from 'firebase/database';
 import { db } from '../services/firebase';
 import UserAvatar from '../components/UserAvatar';
 import toast from 'react-hot-toast';
@@ -30,6 +30,21 @@ const Rooms = () => {
 
   const joinRoom = (roomId) => {
     navigate(`/room?id=${roomId}`);
+  };
+
+  const deleteRoom = async (roomId, roomName) => {
+    if (!window.confirm(`Delete room "${roomName}"? This action cannot be undone.`)) return;
+    try {
+      // Delete the room node
+      await remove(ref(db, `rooms/${roomId}`));
+      // Optional: also clean up presence and peers data for that room
+      await remove(ref(db, `room_presence/${roomId}`)).catch(() => {});
+      await remove(ref(db, `room_peers/${roomId}`)).catch(() => {});
+      toast.success('Room deleted');
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete room');
+    }
   };
 
   if (loading) return <div className="text-center p-8 text-apple-secondary">Loading rooms...</div>;
@@ -67,17 +82,35 @@ const Rooms = () => {
 
         {/* Rooms list */}
         {rooms.length === 0 && <p className="empty-msg text-center">No rooms yet. Create one!</p>}
-        {rooms.map((room) => (
-          <div key={room.id} className="room-card">
-            <div>
-              <h4 className="text-lg font-semibold">{room.name}</h4>
-              <p className="text-apple-secondary text-sm">Owner: {room.owner?.split('@')[0] || 'unknown'}</p>
+        {rooms.map((room) => {
+          const isOwner = user?.email === room.owner;
+          return (
+            <div key={room.id} className="room-card">
+              <div>
+                <h4 className="text-lg font-semibold">{room.name}</h4>
+                <p className="text-apple-secondary text-sm">
+                  Owner: {room.owner?.split('@')[0] || 'unknown'}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => joinRoom(room.id)} 
+                  className="bg-apple-accent text-white px-5 py-2 rounded-xl font-semibold active:opacity-70 transition"
+                >
+                  Join
+                </button>
+                {isOwner && (
+                  <button 
+                    onClick={() => deleteRoom(room.id, room.name)} 
+                    className="bg-red-600 text-white px-5 py-2 rounded-xl font-semibold active:opacity-70 transition"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
-            <button onClick={() => joinRoom(room.id)} className="bg-apple-accent text-white px-5 py-2 rounded-xl font-semibold active:opacity-70 transition">
-              Join
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

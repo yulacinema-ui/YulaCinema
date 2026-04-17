@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "yulacinema-ec8ef"
-  }
+    "default": "yula-cinema",
+    "n": "yula-cinema",
+    "main": "yula-cinema"
+  },
+  "targets": {},
+  "etags": {}
 }
