@@ -44,7 +44,7 @@ const VideoVolumeSlider = ({ player }) => {
 
   return (
     /* Change 1: Added w-full to the container */
-    <div className="flex items-center gap-4 bg-gray-900/90 p-3 rounded-2xl border border-white/10 w-full">
+    <div className="flex items-center gap-4 p-3 w-full">
       <button 
         onClick={() => setIsMuted(!isMuted)} 
         className="text-white text-lg focus:outline-none active:opacity-50 transition"

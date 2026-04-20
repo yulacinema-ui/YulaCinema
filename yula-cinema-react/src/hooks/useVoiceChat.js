@@ -36,20 +36,23 @@ export const useVoiceChat = (roomId, currentUid, userEmail) => {
     return 'user_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
   };
 
-  const attachRemoteStream = useCallback((call, remoteStream) => {
-    const remoteAudio = document.createElement('audio');
-    remoteAudio.autoplay = true;
-    remoteAudio.playsInline = true;
-    remoteAudio.controls = false;
-    remoteAudio.style.display = 'none';
-    document.body.appendChild(remoteAudio);
-    remoteAudio.srcObject = remoteStream;
-    remoteAudio.play().catch(() => {});
-    call.on('close', () => {
-      if (remoteAudio) remoteAudio.remove();
-    });
-    return remoteAudio;
-  }, []);
+const attachRemoteStream = useCallback((call, remoteStream) => {
+  const remoteAudio = document.createElement('audio');
+  remoteAudio.autoplay = true;
+  remoteAudio.playsInline = true;
+  
+  // ADD THESE THREE LINES:
+  remoteAudio.setAttribute('aria-hidden', 'true');
+  // This tells some browsers to prioritize the voice frequency
+  if ("setSinkId" in remoteAudio) {
+     remoteAudio.volume = 1.0; 
+  }
+
+  remoteAudio.srcObject = remoteStream;
+  document.body.appendChild(remoteAudio);
+  
+  return remoteAudio;
+}, []);
 
   const callAllPeers = useCallback(async () => {
     if (!peerRef.current || !localStreamRef.current || !isMicActiveRef.current) return;
@@ -114,7 +117,15 @@ export const useVoiceChat = (roomId, currentUid, userEmail) => {
     if (isMicActiveRef.current) return;
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+  audio: {
+    echoCancellation: true,      // Essential for movie watching
+    noiseSuppression: true,     // Removes background fan/hiss noise
+    autoGainControl: true,      // Keeps everyone's volume level even
+    sampleRate: 48000,          // High-fidelity audio
+    channelCount: 1             // Voice is better in mono (saves bandwidth)
+  }
+});
       localStreamRef.current = stream;
       isMicActiveRef.current = true;
       setIsMicActive(true);

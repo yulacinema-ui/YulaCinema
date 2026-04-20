@@ -9,15 +9,44 @@ const VideoPlayer = ({ url, onPlayerReady }) => {
 
   useEffect(() => {
     if (!playerRef.current && videoRef.current) {
-      const player = playerRef.current = videojs(videoRef.current, {
-        autoplay: false,
-        controls: true,
-        responsive: true,
-        fluid: true,
-        sources: [{ src: url, type: 'video/mp4' }]
-      }, () => {
-        onPlayerReady(player);
-      });
+      // In VideoPlayer.jsx - Update your Video.js options object
+const player = playerRef.current = videojs(videoRef.current, {
+  autoplay: false,
+  controls: true,
+  responsive: true,
+  fluid: true,
+  preload: 'auto',
+  // ADD THIS SECTION:
+  html5: {
+    vhs: { overrideNative: true },
+    nativeVideoTracks: false,
+    nativeAudioTracks: false,
+    nativeTextTracks: false
+  },
+  controlBar: {
+    fullscreenToggle: true // Force the button to show
+  },
+  sources: [{ 
+    src: url, 
+    type: url.includes('.m3u8') ? 'application/x-mpegURL' : 'video/mp4' 
+  }]
+}, () => {
+  // Logic for automatic fullscreen on rotate
+  const handleOrientationChange = () => {
+    if (window.orientation === 90 || window.orientation === -90) {
+      if (player.paused() === false) { // Only go fullscreen if video is playing
+        player.requestFullscreen();
+      }
+    } else {
+      if (player.isFullscreen()) {
+        player.exitFullscreen();
+      }
+    }
+  };
+
+  window.addEventListener('orientationchange', handleOrientationChange);
+  onPlayerReady(player);
+});
     }
   }, [url, onPlayerReady]);
 

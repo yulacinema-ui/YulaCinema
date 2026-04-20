@@ -104,6 +104,24 @@
     transform: scale(0.98);
   }
 }
+/* Force Video.js fullscreen button to show on iPhone */
+.video-js .vjs-fullscreen-control {
+    display: block !important;
+}
+
+/* Prevent the rest of your web UI from rotating/breaking */
+@media screen and (orientation: landscape) and (max-device-width: 932px) {
+  /* 932px is the height of iPhone 15 Pro Max */
+  .min-h-screen {
+    /* Stop the body from scrolling strangely in landscape */
+    overflow: hidden;
+  }
+  
+  /* Hide your UI headers when in landscape to focus on video */
+  .bg-apple-card\/80, .apple-card:not(.p-0) {
+    display: none !important;
+  }
+}
 
 @keyframes pulse {
   0% { transform: scale(1); opacity: 1; }
