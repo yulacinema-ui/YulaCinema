@@ -2,13 +2,17 @@ import { useRef, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRoomUsers } from '../hooks/useFirebaseList';
-import { useVoiceChat } from '../hooks/useVoiceChat';
+// 1. CHANGE: Import your new Agora hook instead of useVoiceChat
+import { useAgoraVoice } from '../hooks/useAgoraVoice'; 
 import { ref, onValue, update, set, onDisconnect, serverTimestamp } from 'firebase/database';
 import { db } from '../services/firebase';
 
 // Components
 import VideoPlayer from '../components/VideoPlayer'; 
 import VideoVolumeSlider from '../components/VideoVolumeSlider';
+
+// 2. ADD: Your App ID here
+const AGORA_APP_ID = "dd23b69f39f84553ae6dba2337b63d6f"; 
 
 const Room = () => {
   const [searchParams] = useSearchParams();
@@ -23,7 +27,10 @@ const Room = () => {
   const [roomName, setRoomName] = useState('');
   
   const users = useRoomUsers(roomId);
-  const voice = useVoiceChat(roomId, user?.uid, user?.email);
+
+  // 3. CHANGE: Use useAgoraVoice instead of useVoiceChat
+  // We keep the variable name 'voice' so we don't have to change the JSX below
+  const voice = useAgoraVoice(AGORA_APP_ID, roomId, user?.uid);
 
   // Sync Control Refs
   const blockSendingRef = useRef(false);
@@ -41,12 +48,10 @@ const Room = () => {
 
       setRoomName(room.name || "Cinema Room");
 
-      // FIX: FORCE URL UPDATE & SYNC RESET IF URL CHANGES
       if (room.videoUrl && room.videoUrl !== roomVideoUrl) {
         setRoomVideoUrl(room.videoUrl);
-        hasInitialSynced.current = false; // Allow sync to catch up to new video 0:00
+        hasInitialSynced.current = false; 
         
-        // If player already exists, force the source change
         if (player) {
             player.src({
                 src: room.videoUrl,
@@ -60,24 +65,20 @@ const Room = () => {
       const state = room.state;
       const isOwnUpdate = state.user === user?.email;
 
-      // Allow sync if it's someone else OR if it's our first time loading the room
       if (isOwnUpdate && hasInitialSynced.current) return;
 
       blockSendingRef.current = true;
 
-      // Calculate time: current state + time passed since update (if playing)
       let targetTime = state.time;
       if (state.playing && state.ts) {
         const elapsed = (Date.now() - state.ts) / 1000;
         if (elapsed > 0 && elapsed < 3600) targetTime += elapsed;
       }
 
-      // Sync Time
       if (Math.abs(player.currentTime() - targetTime) > 1.5) {
         player.currentTime(targetTime);
       }
 
-      // Sync Play/Pause
       if (state.playing && player.paused()) {
         player.play().catch(() => console.log('Autoplay blocked'));
       } else if (!state.playing && !player.paused()) {
@@ -85,8 +86,6 @@ const Room = () => {
       }
 
       hasInitialSynced.current = true;
-      
-      // Increased timeout to ensure the player has finished seeking
       setTimeout(() => { blockSendingRef.current = false; }, 1000);
     });
 
@@ -110,16 +109,11 @@ const Room = () => {
 
     player.on('play', () => sendAction(true));
     player.on('pause', () => {
-        // Only send pause update if we aren't currently seeking
         if (!player.seeking()) sendAction(false);
     });
     player.on('seeked', () => {
       if (blockSendingRef.current) return;
-      
-      // 1. Pause the local player immediately
       player.pause(); 
-      
-      // 2. Tell Firebase to pause for everyone else at this new time
       sendAction(false); 
     });
 
@@ -143,7 +137,6 @@ const Room = () => {
   useEffect(() => {
     if (!player || !roomId || !user?.email) return;
 
-    // A: When I refresh/close
     const handleBeforeUnload = () => {
       update(ref(db, `rooms/${roomId}/state`), {
         playing: false,
@@ -153,11 +146,9 @@ const Room = () => {
       });
     };
 
-    // B: When someone else leaves
     if (prevUsersCount.current > 0 && users.length < prevUsersCount.current) {
       if (!player.paused()) {
         player.pause();
-        // Leader (first person in list) saves state for the room
         if (users[0]?.email === user.email) {
           update(ref(db, `rooms/${roomId}/state`), {
             playing: false,
@@ -187,8 +178,6 @@ const Room = () => {
 
   const handleSetVideo = () => {
     if (!videoUrlInput.trim()) return;
-    
-    // FIX: Clear flags so the new video can sync immediately for the host too
     hasInitialSynced.current = false; 
 
     update(ref(db, `rooms/${roomId}`), {
